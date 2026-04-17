@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Salone Torino 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1923;font-family:Georgia,serif;color:#e8e0d5;min-height:100vh;padding-bottom:60px}
+button{cursor:pointer;font-family:Georgia,serif}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);border-radius:8px;padding:10px 22px;font-size:.88rem;z-index:999;white-space:nowrap;box-shadow:0 4px 20px #00000088;display:none;pointer-events:none}
+#saving{position:fixed;top:12px;right:16px;font-size:.75rem;color:#4a9edd;display:none}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-thumb{background:#2a3a4a;border-radius:3px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="toast"></div>
+<div id="saving">Salvataggio...</div>
+<script>
+var BIN_ID="69dce1d236566621a8aaaed5";
+var API_KEY="$2a$10$PDx06HMIOnbSogmLIYKmnuRw265qOfoAeBG3SW0YlyMS6tcBirY0K";
+var BIN_URL="https://api.jsonbin.io/v3/b/"+BIN_ID;
+var PERSONE=["Emidio Portelli","Claudia Brizzi","Rachele Cassoli","Serena Bottalico","Roberta Cozzarizza","Elisa Ferrario","Valeria Pallotta","Federica Sala","Alberto Simola","Paolo Soraci","Amaranta Valzasina","Sergio Miserini","Claudia Calavetta","Anna Frosini","Federico Marchi","Roberta Parrella","Giulia Passarini","Gabriele Ventura","Laura Mercuri","Chiara Piazzolla"];
+var HOTELS=[
+  {id:1,nome:"Best Western Plus Executive Suites",camere:3,slots:["14/15 mag","15/16 mag"]},
+  {id:2,nome:"Best Western Plus Executive Suites",camere:1,slots:["14/15 mag","15/16 mag","16/17 mag"]},
+  {id:4,nome:"Best Western Plus Executive Suites",camere:1,slots:["15/16 mag","16/17 mag"]},
+  {id:6,nome:"Best Western Cristal Palace",camere:1,slots:["13/14 mag","14/15 mag"]},
+  {id:7,nome:"Residenza Il Nespolo",camere:1,slots:["14/15 mag","15/16 mag"]},
+  {id:8,nome:"Hotel Plaza",camere:6,slots:["14/15 mag","15/16 mag"]}
+];
+var ACCENTS={"Best Western Plus Executive Suites":"#4a9edd","Best Western Cristal Palace":"#6abf4b","Residenza Il Nespolo":"#d4844a","Hotel Plaza":"#9b6dcc"};
+var COLORS=["#e74c3c","#3498db","#2ecc71","#f39c12","#9b59b6","#1abc9c","#e67e22","#e91e63","#00bcd4","#8bc34a"];
+var ASSEGNAZIONI={};
+var isSaving=false;
+
+function colore(n){var h=0;for(var i=0;i<n.length;i++)h=n.charCodeAt(i)+((h<<5)-h);return COLORS[Math.abs(h)%COLORS.length];}
+
+function showToast(msg,type){
+  var t=document.getElementById("toast");
+  t.textContent=msg;t.style.display="block";
+  t.style.background=type==="err"?"#4a1a1a":"#1a3a2a";
+  t.style.border=type==="err"?"1px solid #cc4444":"1px solid #4acd7a";
+  t.style.color=type==="err"?"#ff8888":"#4acd7a";
+  clearTimeout(t._tid);t._tid=setTimeout(function(){t.style.display="none";},2800);
+}
+
+function setSaving(v){isSaving=v;document.getElementById("saving").style.display=v?"block":"none";}
+
+function caricaDati(){
+  document.getElementById("root").innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:80vh;gap:16px;color:#4a9edd"><div style="font-size:2.5rem">&#127968;</div><div>Caricamento...</div></div>';
+  fetch(BIN_URL+"/latest",{headers:{"X-Master-Key":API_KEY,"X-Bin-Meta":false}})
+    .then(function(r){return r.json();})
+    .then(function(data){ASSEGNAZIONI=data.assegnazioni||{};render();})
+    .catch(function(){document.getElementById("root").innerHTML='<div style="max-width:860px;margin:40px auto;padding:0 16px"><div style="background:#3a1a1a;border:1px solid #cc4444;border-radius:10px;padding:16px;color:#ff8888">Impossibile connettersi. <button onclick="caricaDati()" style="background:none;border:none;color:#4a9edd;text-decoration:underline;cursor:pointer">Riprova</button></div></div>';});
+}
+
+function salvaDati(){
+  setSaving(true);
+  fetch(BIN_URL,{
+    method:"PUT",
+    headers:{"Content-Type":"application/json","X-Master-Key":API_KEY},
+    body:JSON.stringify({assegnazioni:ASSEGNAZIONI})
+  })
+  .then(function(){setSaving(false);})
+  .catch(function(){setSaving(false);showToast("Errore salvataggio","err");});
+}
+
+function silentRefresh(){
+  if(isSaving)return;
+  fetch(BIN_URL+"/latest",{headers:{"X-Master-Key":API_KEY,"X-Bin-Meta":false}})
+    .then(function(r){return r.json();})
+    .then(function(data){if(!isSaving){ASSEGNAZIONI=data.assegnazioni||{};render();}})
+    .catch(function(){});
+}
+
+function totSlot(){return HOTELS.reduce(function(a,h){return a+h.camere*h.slots.length;},0);}
+function slotAssegnati(){return Object.keys(ASSEGNAZIONI).length;}
+
+function render(){
+  var tot=totSlot(),ass=slotAssegnati(),pct=tot>0?Math.round((ass/tot)*100):0;
+  var hotelsHTML="";
+  for(var hi=0;hi<HOTELS.length;hi++){
+    var h=HOTELS[hi];
+    var ac=ACCENTS[h.nome]||"#4a9edd";
+    var hAss=0,hTot=h.camere*h.slots.length;
+    for(var ci2=0;ci2<h.camere;ci2++)for(var si2=0;si2<h.slots.length;si2++)if(ASSEGNAZIONI[h.id+"-"+ci2+"-"+si2])hAss++;
+    var hCompleto=(hAss===hTot);
+    var camereHTML="";
+    for(var ci=0;ci<h.camere;ci++){
+      var slotsHTML="";
+      for(var si=0;si<h.slots.length;si++){
+        var slot=h.slots[si],key=h.id+"-"+ci+"-"+si,assegnato=ASSEGNAZIONI[key]||null;
+        if(assegnato){
+          var c=colore(assegnato);
+          slotsHTML+='<div style="flex:1;min-width:0"><div style="font-size:.65rem;color:#4a7a9a;margin-bottom:4px;text-align:center">1 notte · '+slot+'</div><div style="background:'+c+'22;border:1.5px solid '+c+'66;border-radius:8px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between;gap:4px"><div style="display:flex;align-items:center;gap:6px;min-width:0"><div style="width:8px;height:8px;border-radius:50%;background:'+c+';flex-shrink:0"></div><span style="font-size:.8rem;font-weight:bold;color:#e8e0d5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+assegnato+'</span></div><button onclick="liberaSlot(\''+h.id+'\',\''+ci+'\',\''+si+'\')" style="background:none;border:1px solid #3a5a7a;border-radius:4px;color:#5a7a9a;font-size:.65rem;padding:1px 5px;flex-shrink:0">X</button></div></div>';
+        } else {
+          var btns="";
+          for(var pi=0;pi<PERSONE.length;pi++){
+            var p=PERSONE[pi],pc=colore(p);
+            btns+='<button onclick="assegnaSlot(\''+h.id+'\',\''+ci+'\',\''+si+'\',\''+p+'\')" style="background:#0f1923;border:1px solid '+pc+'55;border-radius:5px;padding:4px 8px;color:#c8d8e8;font-size:.75rem;display:inline-flex;align-items:center;gap:5px;margin:2px" onmouseover="this.style.background=\''+pc+'22\'" onmouseout="this.style.background=\'#0f1923\'"><div style="width:7px;height:7px;border-radius:50%;background:'+pc+'"></div>'+p+'</button>';
+          }
+          slotsHTML+='<div style="flex:1;min-width:0"><div style="font-size:.65rem;color:#4a7a9a;margin-bottom:4px;text-align:center">1 notte · '+slot+'</div><div style="background:#0f1923;border:1px dashed #2a3a4a;border-radius:8px;padding:6px 8px;min-height:38px;display:flex;flex-wrap:wrap;align-items:center">'+btns+'</div></div>';
+        }
+      }
+      camereHTML+='<div style="margin-bottom:'+(h.camere>1?"14px":"0")+'">'+(h.camere>1?'<div style="font-size:.7rem;color:#3a5a7a;margin-bottom:6px;letter-spacing:1px;text-transform:uppercase">Camera '+(ci+1)+'</div>':'')+'<div style="display:flex;gap:8px;flex-wrap:wrap">'+slotsHTML+'</div></div>';
+    }
+    var cin=h.slots[0].split("/")[0],cout=h.slots[h.slots.length-1].split("/")[1];
+    hotelsHTML+='<div style="background:#162030;border:1px solid '+ac+'33;border-left:4px solid '+ac+';border-radius:12px;margin-bottom:16px;overflow:hidden"><div style="padding:14px 20px 12px;text-align:center;position:relative"><div style="font-weight:bold;font-size:1.15rem;color:#e8e0d5;margin-bottom:5px">'+h.nome+'</div><div style="font-size:.82rem;color:#5a7a9a">'+h.camere+' '+(h.camere===1?"camera":"camere")+' · '+cin+' mag &#8594; '+cout+'</div>'+(hCompleto?'<span style="position:absolute;top:14px;right:16px;font-size:.7rem;background:#1a4a2a;color:#4acd7a;border-radius:20px;padding:3px 10px;text-transform:uppercase">&#10003; Completo</span>':'')+'</div><div style="padding:0 20px 16px">'+camereHTML+'</div></div>';
+  }
+
+  document.getElementById("root").innerHTML=
+    '<div style="background:linear-gradient(135deg,#1a2a3a,#0f1923);border-bottom:1px solid #2a3a4a;padding:24px 24px 18px"><div style="max-width:860px;margin:0 auto"><div style="display:flex;align-items:baseline;gap:12px;margin-bottom:6px"><span style="font-size:1.5rem;font-weight:bold;color:#e8e0d5">&#127968; Salone Torino 2026</span><span style="font-size:.75rem;color:#6a8aaa;letter-spacing:2px;text-transform:uppercase">Maggio 2026</span></div><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span style="font-size:.82rem;color:#5a7a9a">'+ass+'/'+tot+' notti assegnate</span><div style="width:100px;height:5px;background:#1e3a5a;border-radius:3px"><div style="height:100%;width:'+pct+'%;background:#4a9edd;border-radius:3px;transition:width .4s"></div></div><button onclick="caricaDati()" style="background:none;border:1px solid #2a3a4a;border-radius:6px;color:#4a7a9a;font-size:.72rem;padding:3px 10px">&#8635; Aggiorna</button><button onclick="esportaExcel()" style="background:#1a4a2a;border:1px solid #4acd7a;border-radius:6px;color:#4acd7a;font-size:.72rem;padding:3px 10px">&#8675; Excel</button></div></div></div>'
+    +'<div style="max-width:860px;margin:0 auto;padding:20px 16px 0"><div style="background:#0d1e2e;border:1px solid #4a9edd33;border-left:4px solid #4a9edd;border-radius:10px;padding:12px 16px;margin-bottom:18px;display:flex;gap:10px"><span style="font-size:1rem">&#8505;&#65039;</span><span style="font-size:.85rem;color:#8ab4d4;line-height:1.7"><strong style="color:#4a9edd">Come funziona:</strong> ogni camera mostra le notti disponibili affiancate. Clicca il tuo nome sotto la notte che vuoi prenotare.</span></div>'
+    +hotelsHTML+'</div>';
+}
+
+function assegnaSlot(hotelId,ci,si,persona){
+  var key=hotelId+"-"+ci+"-"+si;
+  if(ASSEGNAZIONI[key]){showToast("Notte gia presa da "+ASSEGNAZIONI[key],"err");return;}
+  ASSEGNAZIONI[key]=persona;render();salvaDati();showToast("Notte assegnata a "+persona+" ✓");
+}
+
+function liberaSlot(hotelId,ci,si){
+  var key=hotelId+"-"+ci+"-"+si;
+  delete ASSEGNAZIONI[key];render();salvaDati();showToast("Prenotazione rimossa");
+}
+
+function esportaExcel(){
+  var righe=[["Hotel","Camera","Notte","Assegnato a"]];
+  for(var hi=0;hi<HOTELS.length;hi++){
+    var h=HOTELS[hi];
+    for(var ci=0;ci<h.camere;ci++)for(var si=0;si<h.slots.length;si++){
+      var cam=h.camere>1?"Camera "+(ci+1):"Camera";
+      righe.push([h.nome,cam,h.slots[si],ASSEGNAZIONI[h.id+"-"+ci+"-"+si]||"—"]);
+    }
+  }
+  var ws=XLSX.utils.aoa_to_sheet(righe);
+  ws["!cols"]=[{wch:38},{wch:10},{wch:14},{wch:22}];
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Camere Salone 2026");
+  XLSX.writeFile(wb,"Salone_Torino_2026_Camere.xlsx");
+  showToast("File Excel scaricato ✓");
+}
+
+caricaDati();
+setInterval(silentRefresh,5000);
+</script>
+</body>
+</html>
