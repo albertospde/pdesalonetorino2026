@@ -53,9 +53,9 @@ function setSaving(v){isSaving=v;document.getElementById("saving").style.display
 
 function caricaDati(){
   document.getElementById("root").innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:80vh;gap:16px;color:#4a9edd"><div style="font-size:2.5rem">&#127968;</div><div>Caricamento...</div></div>';
-  fetch(BIN_URL+"/latest",{headers:{"X-Master-Key":API_KEY,"X-Bin-Meta":false}})
+  fetch(API_URL,{headers:HEADERS})
     .then(function(r){return r.json();})
-    .then(function(data){ASSEGNAZIONI=data.assegnazioni||{};render();})
+    .then(function(d){ASSEGNAZIONI=(d&&d[0]&&d[0].data)?d[0].data.assegnazioni||{}:{};render();})
     .catch(function(){document.getElementById("root").innerHTML='<div style="max-width:860px;margin:40px auto;padding:0 16px"><div style="background:#3a1a1a;border:1px solid #cc4444;border-radius:10px;padding:16px;color:#ff8888">Impossibile connettersi. <button onclick="caricaDati()" style="background:none;border:none;color:#4a9edd;text-decoration:underline;cursor:pointer">Riprova</button></div></div>';});
 }
 
@@ -72,9 +72,9 @@ function salvaDati(){
 
 function silentRefresh(){
   if(isSaving)return;
-  fetch(BIN_URL+"/latest",{headers:{"X-Master-Key":API_KEY,"X-Bin-Meta":false}})
+  fetch(API_URL,{headers:HEADERS})
     .then(function(r){return r.json();})
-    .then(function(data){if(!isSaving){ASSEGNAZIONI=data.assegnazioni||{};render();}})
+    .then(function(d){if(!isSaving){ASSEGNAZIONI=(d&&d[0]&&d[0].data)?d[0].data.assegnazioni||{}:{};render();}})
     .catch(function(){});
 }
 
