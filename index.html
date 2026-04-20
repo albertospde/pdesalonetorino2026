@@ -37,9 +37,9 @@ var ACCENTS={"Best Western Plus Executive Suites":"#4a9edd","Best Western Crista
 var COLORS=["#e74c3c","#3498db","#2ecc71","#f39c12","#9b59b6","#1abc9c","#e67e22","#e91e63","#00bcd4","#8bc34a"];
 var ASSEGNAZIONI={};
 var isSaving=false;
-
+ 
 function colore(n){var h=0;for(var i=0;i<n.length;i++)h=n.charCodeAt(i)+((h<<5)-h);return COLORS[Math.abs(h)%COLORS.length];}
-
+ 
 function showToast(msg,type){
   var t=document.getElementById("toast");
   t.textContent=msg;t.style.display="block";
@@ -48,9 +48,9 @@ function showToast(msg,type){
   t.style.color=type==="err"?"#ff8888":"#4acd7a";
   clearTimeout(t._tid);t._tid=setTimeout(function(){t.style.display="none";},2800);
 }
-
+ 
 function setSaving(v){isSaving=v;document.getElementById("saving").style.display=v?"block":"none";}
-
+ 
 function caricaDati(){
   document.getElementById("root").innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:80vh;gap:16px;color:#4a9edd"><div style="font-size:2.5rem">&#127968;</div><div>Caricamento...</div></div>';
   fetch(API_URL,{headers:HEADERS})
@@ -58,7 +58,7 @@ function caricaDati(){
     .then(function(d){ASSEGNAZIONI=(d&&d[0]&&d[0].data)?d[0].data.assegnazioni||{}:{};render();})
     .catch(function(){document.getElementById("root").innerHTML='<div style="max-width:860px;margin:40px auto;padding:0 16px"><div style="background:#3a1a1a;border:1px solid #cc4444;border-radius:10px;padding:16px;color:#ff8888">Impossibile connettersi. <button onclick="caricaDati()" style="background:none;border:none;color:#4a9edd;text-decoration:underline;cursor:pointer">Riprova</button></div></div>';});
 }
-
+ 
 function salvaDati(){
   setSaving(true);
   fetch(API_URL,{
@@ -69,7 +69,7 @@ function salvaDati(){
   .then(function(){setSaving(false);})
   .catch(function(){setSaving(false);showToast("Errore salvataggio","err");});
 }
-
+ 
 function silentRefresh(){
   if(isSaving)return;
   fetch(API_URL,{headers:HEADERS})
@@ -77,10 +77,10 @@ function silentRefresh(){
     .then(function(d){if(!isSaving){ASSEGNAZIONI=(d&&d[0]&&d[0].data)?d[0].data.assegnazioni||{}:{};render();}})
     .catch(function(){});
 }
-
+ 
 function totSlot(){return HOTELS.reduce(function(a,h){return a+h.camere*h.slots.length;},0);}
 function slotAssegnati(){return Object.keys(ASSEGNAZIONI).length;}
-
+ 
 function render(){
   var tot=totSlot(),ass=slotAssegnati(),pct=tot>0?Math.round((ass/tot)*100):0;
   var hotelsHTML="";
@@ -112,24 +112,24 @@ function render(){
     var cin=h.slots[0].split("/")[0],cout=h.slots[h.slots.length-1].split("/")[1];
     hotelsHTML+='<div style="background:#162030;border:1px solid '+ac+'33;border-left:4px solid '+ac+';border-radius:12px;margin-bottom:16px;overflow:hidden"><div style="padding:14px 20px 12px;text-align:center;position:relative"><div style="font-weight:bold;font-size:1.15rem;color:#e8e0d5;margin-bottom:5px">'+h.nome+'</div><div style="font-size:.82rem;color:#5a7a9a">'+h.camere+' '+(h.camere===1?"camera":"camere")+' · '+cin+' mag &#8594; '+cout+'</div>'+(hCompleto?'<span style="position:absolute;top:14px;right:16px;font-size:.7rem;background:#1a4a2a;color:#4acd7a;border-radius:20px;padding:3px 10px;text-transform:uppercase">&#10003; Completo</span>':'')+'</div><div style="padding:0 20px 16px">'+camereHTML+'</div></div>';
   }
-
+ 
   document.getElementById("root").innerHTML=
     '<div style="background:linear-gradient(135deg,#1a2a3a,#0f1923);border-bottom:1px solid #2a3a4a;padding:24px 24px 18px"><div style="max-width:860px;margin:0 auto"><div style="display:flex;align-items:baseline;gap:12px;margin-bottom:6px"><span style="font-size:1.5rem;font-weight:bold;color:#e8e0d5">&#127968; Salone Torino 2026</span><span style="font-size:.75rem;color:#6a8aaa;letter-spacing:2px;text-transform:uppercase">Maggio 2026</span></div><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span style="font-size:.82rem;color:#5a7a9a">'+ass+'/'+tot+' notti assegnate</span><div style="width:100px;height:5px;background:#1e3a5a;border-radius:3px"><div style="height:100%;width:'+pct+'%;background:#4a9edd;border-radius:3px;transition:width .4s"></div></div><button onclick="caricaDati()" style="background:none;border:1px solid #2a3a4a;border-radius:6px;color:#4a7a9a;font-size:.72rem;padding:3px 10px">&#8635; Aggiorna</button><button onclick="esportaExcel()" style="background:#1a4a2a;border:1px solid #4acd7a;border-radius:6px;color:#4acd7a;font-size:.72rem;padding:3px 10px">&#8675; Excel</button></div></div></div>'
     +'<div style="max-width:860px;margin:0 auto;padding:20px 16px 0"><div style="background:#0d1e2e;border:1px solid #4a9edd33;border-left:4px solid #4a9edd;border-radius:10px;padding:12px 16px;margin-bottom:18px;display:flex;gap:10px"><span style="font-size:1rem">&#8505;&#65039;</span><span style="font-size:.85rem;color:#8ab4d4;line-height:1.7"><strong style="color:#4a9edd">Come funziona:</strong> ogni camera mostra le notti disponibili affiancate. Clicca il tuo nome sotto la notte che vuoi prenotare.</span></div>'
     +hotelsHTML+'</div>';
 }
-
+ 
 function assegnaSlot(hotelId,ci,si,persona){
   var key=hotelId+"-"+ci+"-"+si;
   if(ASSEGNAZIONI[key]){showToast("Notte gia presa da "+ASSEGNAZIONI[key],"err");return;}
   ASSEGNAZIONI[key]=persona;render();salvaDati();showToast("Notte assegnata a "+persona+" ✓");
 }
-
+ 
 function liberaSlot(hotelId,ci,si){
   var key=hotelId+"-"+ci+"-"+si;
   delete ASSEGNAZIONI[key];render();salvaDati();showToast("Prenotazione rimossa");
 }
-
+ 
 function esportaExcel(){
   var righe=[["Hotel","Camera","Notte","Assegnato a"]];
   for(var hi=0;hi<HOTELS.length;hi++){
@@ -146,7 +146,7 @@ function esportaExcel(){
   XLSX.writeFile(wb,"Salone_Torino_2026_Camere.xlsx");
   showToast("File Excel scaricato ✓");
 }
-
+ 
 caricaDati();
 setInterval(silentRefresh,5000);
 </script>
